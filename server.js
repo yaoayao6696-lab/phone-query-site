@@ -79,6 +79,15 @@ app.post('/query',(req,res)=>{
 
 });
 
+// 查看所有号码
+app.get('/all',(req,res)=>{
+
+    const db = readDB();
+
+    res.json(db);
+
+});
+
 app.listen(process.env.PORT || 3000,()=>{
 
     console.log('服务器启动成功');
