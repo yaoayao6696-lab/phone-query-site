@@ -24,11 +24,6 @@ body{
     box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
-h1{
-    text-align:center;
-    margin-bottom:30px;
-}
-
 input{
     width:100%;
     padding:15px;
@@ -51,20 +46,11 @@ button{
     cursor:pointer;
 }
 
-button:hover{
-    background:#0958d9;
-}
-
 #result{
-    margin-top:25px;
+    margin-top:20px;
     background:#f0f2f5;
     padding:20px;
     border-radius:10px;
-    line-height:2;
-}
-
-.history{
-    margin-top:30px;
 }
 
 .history-item{
@@ -81,7 +67,7 @@ button:hover{
 
 <div class="container">
 
-<h1>手机号查询系统</h1>
+<h2>手机号查询系统</h2>
 
 <input type="text" id="username" placeholder="请输入查询人">
 
@@ -91,13 +77,9 @@ button:hover{
 
 <div id="result"></div>
 
-<div class="history">
-
 <h3>我的查询记录</h3>
 
 <div id="history"></div>
-
-</div>
 
 </div>
 
@@ -117,40 +99,32 @@ async function queryPhone(){
 
     }
 
-    try{
+    const response = await fetch('/query',{
 
-        const response = await fetch('/query',{
+        method:'POST',
 
-            method:'POST',
+        headers:{
+            'Content-Type':'application/json'
+        },
 
-            headers:{
-                'Content-Type':'application/json'
-            },
+        body:JSON.stringify({
+            username,
+            phone
+        })
 
-            body:JSON.stringify({
-                username:username,
-                phone:phone
-            })
+    });
 
-        });
+    const data = await response.json();
 
-        const data = await response.json();
+    document.getElementById('result').innerHTML = `
+        <strong>${data.message}</strong>
+        <br><br>
+        查询人：
+        <br>
+        ${data.users.join('<br>')}
+    `;
 
-        document.getElementById('result').innerHTML = `
-            <strong>${data.message}</strong>
-            <br><br>
-            查询人：
-            <br>
-            ${data.users.join('<br>')}
-        `;
-
-        saveHistory(phone);
-
-    }catch(error){
-
-        document.getElementById('result').innerHTML='服务器连接失败';
-
-    }
+    saveHistory(phone);
 
 }
 
@@ -160,12 +134,8 @@ function saveHistory(phone){
 
     history.unshift({
         phone:phone,
-       time:new Date().getFullYear() + '-' +
-(new Date().getMonth()+1) + '-' +
-new Date().getDate() + ' ' +
-new Date().getHours() + ':' +
-new Date().getMinutes() + ':' +
-new Date().getSeconds()
+        time:new Date().toLocaleString('zh-CN')
+    });
 
     localStorage.setItem('history',JSON.stringify(history));
 
@@ -183,8 +153,7 @@ function showHistory(){
 
         html += `
         <div class="history-item">
-            手机号：${item.phone}
-            <br>
+            手机号：${item.phone}<br>
             时间：${item.time}
         </div>
         `;
