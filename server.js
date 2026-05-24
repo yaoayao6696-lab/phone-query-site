@@ -11,46 +11,64 @@ app.use(express.static(__dirname));
 
 const DB_FILE = 'database.json';
 
-// 初始化数据库
-if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify([]));
+if(!fs.existsSync(DB_FILE)){
+
+    fs.writeFileSync(DB_FILE,JSON.stringify([]));
+
 }
 
-// 读取数据库
-function readDB() {
+function readDB(){
+
     return JSON.parse(fs.readFileSync(DB_FILE));
+
 }
 
-// 写入数据库
-function writeDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+function writeDB(data){
+
+    fs.writeFileSync(DB_FILE,JSON.stringify(data,null,2));
+
 }
 
-// 查询接口
-app.post('/query', (req, res) => {
+app.post('/query',(req,res)=>{
+
+    const username = req.body.username;
 
     const phone = req.body.phone;
 
     let db = readDB();
 
-    let existing = db.find(item => item.phone === phone);
+    let existing = db.find(item=>item.phone === phone);
 
-    // 已存在
-    if (existing) {
+    if(existing){
 
         existing.count += 1;
+
+        if(!existing.users.includes(username)){
+
+            existing.users.push(username);
+
+        }
 
         writeDB(db);
 
         return res.json({
-            message: `该号码已被查询 ${existing.count} 次`
+
+            message:`该号码已被查询 ${existing.count} 次`,
+
+            users:existing.users
+
         });
+
     }
 
-    // 不存在
     const newData = {
-        phone: phone,
-        count: 1
+
+        phone:phone,
+
+        count:1,
+
+        users:[username]
+
     };
 
     db.push(newData);
@@ -58,19 +76,25 @@ app.post('/query', (req, res) => {
     writeDB(db);
 
     res.json({
-        message: '该号码首次被查询'
+
+        message:'该号码首次被查询',
+
+        users:[username]
+
     });
+
 });
 
-// 查看全部数据
-app.get('/all', (req, res) => {
+app.get('/all',(req,res)=>{
 
     const db = readDB();
 
     res.json(db);
+
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000,()=>{
+
     console.log('服务器启动成功');
-    console.log('http://localhost:3000');
+
 });
