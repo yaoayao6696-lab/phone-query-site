@@ -1,113 +1,103 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手机号查询系统</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手机号查询系统</title>
 
-    <style>
+<style>
 
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-        }
+body{
+    font-family:Arial;
+    background:#f5f5f5;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
 
-        body{
-            font-family:Arial;
-            background:#f5f5f5;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            min-height:100vh;
-            padding:20px;
-        }
+.container{
+    width:500px;
+    background:#fff;
+    padding:40px;
+    border-radius:12px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
 
-        .container{
-            width:500px;
-            background:white;
-            padding:40px;
-            border-radius:15px;
-            box-shadow:0 0 15px rgba(0,0,0,0.1);
-        }
+h1{
+    text-align:center;
+    margin-bottom:30px;
+}
 
-        h1{
-            text-align:center;
-            margin-bottom:30px;
-        }
+input{
+    width:100%;
+    padding:15px;
+    margin-top:15px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:16px;
+    box-sizing:border-box;
+}
 
-        input{
-            width:100%;
-            padding:15px;
-            margin-top:15px;
-            border:1px solid #ccc;
-            border-radius:8px;
-            font-size:16px;
-        }
+button{
+    width:100%;
+    padding:15px;
+    margin-top:20px;
+    background:#1677ff;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-size:18px;
+    cursor:pointer;
+}
 
-        button{
-            width:100%;
-            padding:15px;
-            margin-top:20px;
-            border:none;
-            border-radius:8px;
-            background:#1677ff;
-            color:white;
-            font-size:16px;
-            cursor:pointer;
-        }
+button:hover{
+    background:#0958d9;
+}
 
-        button:hover{
-            background:#0958d9;
-        }
+#result{
+    margin-top:25px;
+    background:#f0f2f5;
+    padding:20px;
+    border-radius:10px;
+    line-height:2;
+}
 
-        #result{
-            margin-top:25px;
-            padding:20px;
-            background:#f0f2f5;
-            border-radius:10px;
-            line-height:2;
-        }
+.history{
+    margin-top:30px;
+}
 
-        .history-box{
-            margin-top:30px;
-        }
+.history-item{
+    background:#f5f5f5;
+    padding:10px;
+    border-radius:8px;
+    margin-top:10px;
+}
 
-        ul{
-            list-style:none;
-        }
-
-        li{
-            background:#f5f5f5;
-            padding:10px;
-            border-radius:8px;
-            margin-bottom:10px;
-        }
-
-    </style>
+</style>
 
 </head>
 <body>
 
 <div class="container">
 
-    <h1>手机号查询系统</h1>
+<h1>手机号查询系统</h1>
 
-    <input type="text" id="username" placeholder="请输入查询人姓名">
+<input type="text" id="username" placeholder="请输入查询人">
 
-    <input type="text" id="phone" placeholder="请输入手机号">
+<input type="text" id="phone" placeholder="请输入手机号">
 
-    <button onclick="queryPhone()">查询</button>
+<button onclick="queryPhone()">查询</button>
 
-    <div id="result"></div>
+<div id="result"></div>
 
-    <div class="history-box">
+<div class="history">
 
-        <h3>我的查询记录</h3>
+<h3>我的查询记录</h3>
 
-        <ul id="history"></ul>
+<div id="history"></div>
 
-    </div>
+</div>
 
 </div>
 
@@ -124,36 +114,43 @@ async function queryPhone(){
         alert('请输入姓名和手机号');
 
         return;
+
     }
 
-    const response = await fetch('https://phone-query-site.onrender.com/query',{
+    try{
 
-        method:'POST',
+        const response = await fetch('/query',{
 
-        headers:{
-            'Content-Type':'application/json'
-        },
+            method:'POST',
 
-        body:JSON.stringify({
-            username,
-            phone
-        })
+            headers:{
+                'Content-Type':'application/json'
+            },
 
-    });
+            body:JSON.stringify({
+                username:username,
+                phone:phone
+            })
 
-    const data = await response.json();
+        });
 
-    document.getElementById('result').innerHTML = `
+        const data = await response.json();
 
-        <strong>${data.message}</strong><br><br>
+        document.getElementById('result').innerHTML = `
+            <strong>${data.message}</strong>
+            <br><br>
+            查询人：
+            <br>
+            ${data.users.join('<br>')}
+        `;
 
-        查询人：<br>
+        saveHistory(phone);
 
-        ${data.users.join('<br>')}
+    }catch(error){
 
-    `;
+        document.getElementById('result').innerHTML='服务器连接失败';
 
-    saveHistory(phone);
+    }
 
 }
 
@@ -162,9 +159,13 @@ function saveHistory(phone){
     let history = JSON.parse(localStorage.getItem('history')) || [];
 
     history.unshift({
-    phone: phone,
-    time: new Date().toLocaleString()
-});
+        phone:phone,
+       time:new Date().getFullYear() + '-' +
+(new Date().getMonth()+1) + '-' +
+new Date().getDate() + ' ' +
+new Date().getHours() + ':' +
+new Date().getMinutes() + ':' +
+new Date().getSeconds()
 
     localStorage.setItem('history',JSON.stringify(history));
 
@@ -176,16 +177,19 @@ function showHistory(){
 
     let history = JSON.parse(localStorage.getItem('history')) || [];
 
-    let html = '';
+    let html='';
 
     history.forEach(item=>{
 
         html += `
-<li>
-    手机号：${item.phone}<br>
-    时间：${item.time}
-</li>
-`;
+        <div class="history-item">
+            手机号：${item.phone}
+            <br>
+            时间：${item.time}
+        </div>
+        `;
+
+    });
 
     document.getElementById('history').innerHTML = html;
 
