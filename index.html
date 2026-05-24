@@ -161,7 +161,10 @@ function saveHistory(phone){
 
     let history = JSON.parse(localStorage.getItem('history')) || [];
 
-    history.unshift(phone);
+    history.unshift({
+    phone: phone,
+    time: new Date().toLocaleString()
+});
 
     localStorage.setItem('history',JSON.stringify(history));
 
@@ -177,9 +180,12 @@ function showHistory(){
 
     history.forEach(item=>{
 
-        html += `<li>${item}</li>`;
-
-    });
+        html += `
+<li>
+    手机号：${item.phone}<br>
+    时间：${item.time}
+</li>
+`;
 
     document.getElementById('history').innerHTML = html;
 
