@@ -81,6 +81,10 @@ button{
 
 <div id="history"></div>
 
+<h3>全站查询记录</h3>
+
+<div id="allRecords"></div>
+
 </div>
 
 <script>
@@ -165,6 +169,41 @@ function showHistory(){
 }
 
 showHistory();
+
+async function loadAllRecords(){
+
+    const response = await fetch('/all');
+
+    const data = await response.json();
+
+    let html = '';
+
+    data.forEach(item=>{
+
+        html += `
+        <div class="history-item">
+
+            手机号：${item.phone}
+            <br>
+
+            查询次数：${item.count}
+            <br>
+
+            查询人：
+            <br>
+
+            ${item.users.join('、')}
+
+        </div>
+        `;
+
+    });
+
+    document.getElementById('allRecords').innerHTML = html;
+
+}
+
+loadAllRecords();
 
 </script>
 
