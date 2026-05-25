@@ -1,12 +1,15 @@
 {
   "name": "phone-query-site",
   "version": "1.0.0",
+  "description": "手机号高级查询系统",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.19.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   }
 }
