@@ -6,9 +6,9 @@ const path = require('path');
 const app = express();
 
 // 中间件配置
-app.use(express.json({ limit: '20mb' })); // 提高解析限制，方便大批量上传号码
+app.use(express.json({ limit: '20mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
-app.use(express.static(__dirname));       // 托管当前目录下的静态文件（如 index.html）
+app.use(express.static(__dirname));       
 
 let db;
 
@@ -19,7 +19,7 @@ async function initDatabase() {
         driver: sqlite3.Database
     });
 
-    // 创建号码库存表（主键自带唯一索引，查询极快）
+    // 创建号码库存表
     await db.exec(`
         CREATE TABLE IF NOT EXISTS phone_repository (
             phone_number TEXT PRIMARY KEY,
@@ -50,7 +50,6 @@ app.post('/api/upload', async (req, res) => {
     }
 
     try {
-        // 开启事务，确保批量插入的高性能
         await db.exec('BEGIN TRANSACTION');
         const stmt = await db.prepare('INSERT OR IGNORE INTO phone_repository (phone_number) VALUES (?)');
         
@@ -62,11 +61,11 @@ app.post('/api/upload', async (req, res) => {
         }
         
         await stmt.finalize();
-        await db.exec('COMMIT'); // 提交事务
+        await db.exec('COMMIT'); 
         
         res.json({ success: true, message: `成功导入 ${phones.length} 个号码` });
     } catch (error) {
-        await db.exec('ROLLBACK'); // 发生错误则回滚
+        await db.exec('ROLLBACK'); 
         res.status(500).json({ success: false, message: '数据库写入失败', error: error.message });
     }
 });
@@ -88,16 +87,18 @@ app.get('/api/check', async (req, res) => {
         const inRepository = !!inRepoRow;
         const statusText = inRepository ? '在库' : '不在库';
 
-        // 步骤 B: 统计该号码的历史被查次数（在本次写入之前）
+        // 步骤 B: 统计该号码的历史被查次数
         const countRow = await db.get('SELECT COUNT(*) as total FROM query_logs WHERE phone_number = ?', [trimmedPhone]);
         const historyCount = countRow ? countRow.total : 0;
         const isFirstQuery = historyCount === 0;
 
-        // 步骤 C: 将本次查询行为和当时的状态写入公开日志表
-        await db.run(
-            'INSERT INTO query_logs (phone_number, querier_name, is_in_repo) VALUES (?, ?, ?)', 
-            [trimmedPhone, trimmedQuerier, statusText]
-        );
+        // 【核心条件】：只有在库（重复）的号码，才写入动态日志供全网看见
+        if (inRepository) {
+            await db.run(
+                'INSERT INTO query_logs (phone_number, querier_name, is_in_repo) VALUES (?, ?, ?)', 
+                [trimmedPhone, trimmedQuerier, statusText]
+            );
+        }
 
         // 返回给前端结果
         res.json({
@@ -114,13 +115,28 @@ app.get('/api/check', async (req, res) => {
     }
 });
 
-// 4. 接口：获取最近 50 条公开查询动态
+// 4. 接口：获取最近 50 条【重复号码】的公开查询动态，并附带合并的历史查询人
 app.get('/api/recent-logs', async (req, res) => {
     try {
+        // 使用 GROUP_CONCAT 聚合函数，自动把该号码历史上所有查询过的人合并成一个字符串（按时间先后排序）
         const logs = await db.all(`
-            SELECT phone_number, querier_name, is_in_repo, datetime(query_time, 'localtime') as q_time 
-            FROM query_logs 
-            ORDER BY id DESC 
+            SELECT 
+                main.phone_number, 
+                main.querier_name, 
+                main.is_in_repo, 
+                datetime(main.query_time, 'localtime') as q_time,
+                (
+                    SELECT GROUP_CONCAT(querier_name, '、') 
+                    FROM (
+                        SELECT querier_name 
+                        FROM query_logs 
+                        WHERE phone_number = main.phone_number AND id < main.id
+                        ORDER BY id ASC
+                    )
+                ) as history_queriers
+            FROM query_logs as main
+            WHERE main.is_in_repo = '在库'
+            ORDER BY main.id DESC 
             LIMIT 50
         `);
         res.json({ success: true, logs });
