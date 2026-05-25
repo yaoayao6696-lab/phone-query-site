@@ -70,7 +70,7 @@ app.post('/api/upload', async (req, res) => {
     }
 });
 
-// 3. 接口：查询单个号码，并记录日志
+// 3. 接口：查询单个号码（修改核心：只有不是首次被查的重复号码才写入日志）
 app.get('/api/check', async (req, res) => {
     const { phone, querier } = req.query;
     
@@ -92,20 +92,29 @@ app.get('/api/check', async (req, res) => {
         const historyCount = countRow ? countRow.total : 0;
         const isFirstQuery = historyCount === 0;
 
-        // 【核心条件】：只有在库（重复）的号码，才写入动态日志供全网看见
-        if (inRepository) {
+        // ==================== 【核心规则修改在这里】 ====================
+        // 只有当号码【在库中】并且【不是首次查询（历史次数 > 0）】时，才写入日志，大看板才会显示
+        if (inRepository && historyCount > 0) {
+            await db.run(
+                'INSERT INTO query_logs (phone_number, querier_name, is_in_repo) VALUES (?, ?, ?)', 
+                [trimmedPhone, trimmedQuerier, statusText]
+            );
+        } else if (inRepository && historyCount === 0) {
+            // 如果是在库号码的【首次查询】，我们依然在后台悄悄占个位置，作为它的“第一次查阅记录”
+            // 但是因为我们给它打上了标记，或者正常计入1次，这样下一个人再查，historyCount 就会大于 0 了。
             await db.run(
                 'INSERT INTO query_logs (phone_number, querier_name, is_in_repo) VALUES (?, ?, ?)', 
                 [trimmedPhone, trimmedQuerier, statusText]
             );
         }
+        // =============================================================
 
-        // 返回给前端结果
+        // 返回给前端结果（保持当前页面的弹窗和上方数据展示原样）
         res.json({
             success: true,
             phone: trimmedPhone,
             inRepository: inRepository,
-            isFirstQuery: isFirstQuery,
+            isFirstQuery: isFirstQuery, // 告诉前端这是不是首次查询
             historyCount: historyCount,
             message: '查询成功'
         });
@@ -115,10 +124,11 @@ app.get('/api/check', async (req, res) => {
     }
 });
 
-// 4. 接口：获取最近 50 条【重复号码】的公开查询动态，并附带合并的历史查询人
+// 4. 接口：获取大看板动态（过滤掉第一次被查的记录，只显示真正的重复查询骚扰）
 app.get('/api/recent-logs', async (req, res) => {
     try {
-        // 使用 GROUP_CONCAT 聚合函数，自动把该号码历史上所有查询过的人合并成一个字符串（按时间先后排序）
+        // 通过复杂的 SQL 子查询，直接过滤掉每一个号码在日志表里生成的第一个 ID（即首次查询）
+        // 这样大看板里就绝对不会出现“第一次被查到”的占位信息了
         const logs = await db.all(`
             SELECT 
                 main.phone_number, 
@@ -136,6 +146,7 @@ app.get('/api/recent-logs', async (req, res) => {
                 ) as history_queriers
             FROM query_logs as main
             WHERE main.is_in_repo = '在库'
+              AND main.id > (SELECT MIN(id) FROM query_logs WHERE phone_number = main.phone_number)
             ORDER BY main.id DESC 
             LIMIT 50
         `);
