@@ -1,210 +1,279 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>手机号查询系统</title>
-
-<style>
-
-body{
-    font-family:Arial;
-    background:#f5f5f5;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-}
-
-.container{
-    width:500px;
-    background:#fff;
-    padding:40px;
-    border-radius:12px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
-
-input{
-    width:100%;
-    padding:15px;
-    margin-top:15px;
-    border:1px solid #ccc;
-    border-radius:8px;
-    font-size:16px;
-    box-sizing:border-box;
-}
-
-button{
-    width:100%;
-    padding:15px;
-    margin-top:20px;
-    background:#1677ff;
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    font-size:18px;
-    cursor:pointer;
-}
-
-#result{
-    margin-top:20px;
-    background:#f0f2f5;
-    padding:20px;
-    border-radius:10px;
-}
-
-.history-item{
-    background:#f5f5f5;
-    padding:10px;
-    border-radius:8px;
-    margin-top:10px;
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手机号高级查询系统</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2, h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-green {
+            background-color: #2ecc71;
+        }
+        .btn-green:hover {
+            background-color: #27ae60;
+        }
+        /* 结果样式 */
+        .result-box {
+            display: none;
+            background: #f9f9f9;
+            border-left: 5px solid #3498db;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        .result-item {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        /* 动态列表样式 */
+        .log-list {
+            list-style: none;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .log-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .log-item:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .badge-in { background-color: #ffebeb; color: #e74c3c; }
+        .badge-out { background-color: #e6ffed; color: #2ecc71; }
+    </style>
 </head>
 <body>
 
 <div class="container">
 
-<h2>手机号查询系统</h2>
+    <div class="card">
+        <h2>🔎 号码状态查询</h2>
+        <div class="form-group">
+            <label for="querierInput">查询人姓名 / 工号：</label>
+            <input type="text" id="querierInput" placeholder="请输入您的名字（必填）">
+        </div>
+        <div class="form-group">
+            <label for="phoneInput">待查手机号码：</label>
+            <input type="text" id="phoneInput" placeholder="请输入要查询的手机号">
+        </div>
+        <button onclick="checkPhone()">立即查询</button>
 
-<input type="text" id="username" placeholder="请输入查询人">
+        <div id="resultBox" class="result-box">
+            <div class="result-item"><strong>查询号码：</strong> <span id="resPhone"></span></div>
+            <div class="result-item"><strong>是否在库：</strong> <span id="resInRepo"></span></div>
+            <div class="result-item"><strong>查询状态：</strong> <span id="resFirst"></span></div>
+            <div class="result-item"><strong>全网历史被查次数：</strong> <span id="resCount" style="color:#3498db; font-weight:bold;"></span> 次</div>
+        </div>
+    </div>
 
-<input type="text" id="phone" placeholder="请输入手机号">
+    <div class="card">
+        <h3>📥 录入新号码到数据库</h3>
+        <div class="form-group">
+            <label for="uploadArea">号码列表（每行一个）：</label>
+            <textarea id="uploadArea" placeholder="支持从Excel或TXT大量复制，每行请只留一个号码"></textarea>
+        </div>
+        <button class="btn-green" onclick="uploadPhones()">导入数据库</button>
+    </div>
 
-<button onclick="queryPhone()">查询</button>
-
-<div id="result"></div>
-
-<h3>我的查询记录</h3>
-
-<div id="history"></div>
-
-<h3>全站查询记录</h3>
-
-<div id="allRecords"></div>
+    <div class="card">
+        <h3>📋 全网实时查询动态（所有人可见）</h3>
+        <div style="margin-bottom: 10px;">
+            <button style="padding: 5px 10px; font-size:12px;" onclick="loadRecentLogs()">🔄 手动刷新动态</button>
+        </div>
+        <ul id="logList" class="log-list">
+            </ul>
+    </div>
 
 </div>
 
 <script>
+// 页面加载完毕后，自动抓取一次全网动态
+window.onload = function() {
+    loadRecentLogs();
+};
 
-async function queryPhone(){
-
-    const username = document.getElementById('username').value;
-
-    const phone = document.getElementById('phone').value;
-
-    if(!username || !phone){
-
-        alert('请输入姓名和手机号');
-
+// 功能一：发起号码查询
+async function checkPhone() {
+    const querier = document.getElementById('querierInput').value.trim();
+    const phone = document.getElementById('phoneInput').value.trim();
+    const resultBox = document.getElementById('resultBox');
+    
+    if (!querier || !phone) {
+        alert('请输入完整的“查询人姓名”和“待查号码”！');
         return;
-
     }
 
-    const response = await fetch('/query',{
+    try {
+        const response = await fetch(`/api/check?phone=${encodeURIComponent(phone)}&querier=${encodeURIComponent(querier)}`);
+        const data = await response.json();
 
-        method:'POST',
+        if (data.success) {
+            // 显示结果容器
+            resultBox.style.display = 'block';
+            
+            // 填入数据
+            document.getElementById('resPhone').innerText = data.phone;
+            document.getElementById('resInRepo').innerHTML = data.inRepository 
+                ? '<span style="color: #e74c3c; font-weight:bold;">❌ 已在库中</span>' 
+                : '<span style="color: #2ecc71; font-weight:bold;">✅ 不在库中</span>';
+            document.getElementById('resFirst').innerHTML = data.isFirstQuery 
+                ? '<span style="color: #2ecc71;">✨ 属于首次查询</span>' 
+                : '<span style="color: #f39c12;">⚠️ 历史已被查过</span>';
+            document.getElementById('resCount').innerText = data.historyCount;
 
-        headers:{
-            'Content-Type':'application/json'
-        },
-
-        body:JSON.stringify({
-            username,
-            phone
-        })
-
-    });
-
-    const data = await response.json();
-
-    document.getElementById('result').innerHTML = `
-        <strong>${data.message}</strong>
-        <br><br>
-        查询人：
-        <br>
-        ${data.users.join('<br>')}
-    `;
-
-    saveHistory(phone);
-
+            // 查询成功后自动刷新底部的公共状态大看板
+            loadRecentLogs();
+        } else {
+            alert('查询失败：' + data.message);
+        }
+    } catch (error) {
+        alert('无法连接到后端服务器，请确认后台 node server.js 是否启动。');
+    }
 }
 
-function saveHistory(phone){
+// 功能二: 批量录入号码
+async function uploadPhones() {
+    const text = document.getElementById('uploadArea').value;
+    // 使用换行切分数组，过滤掉空行和空格
+    const phoneArray = text.split('\n').map(p => p.trim()).filter(p => p.length > 0);
 
-    let history = JSON.parse(localStorage.getItem('history')) || [];
+    if (phoneArray.length === 0) {
+        alert('请输入至少一个有效的号码后再提交！');
+        return;
+    }
 
-    history.unshift({
-        phone:phone,
-        time:new Date().toLocaleString('zh-CN')
-    });
-
-    localStorage.setItem('history',JSON.stringify(history));
-
-    showHistory();
-
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phones: phoneArray })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message + '！号码库更新成功。');
+            document.getElementById('uploadArea').value = ''; // 清空输入框
+        } else {
+            alert('导入失败：' + data.message);
+        }
+    } catch (error) {
+        alert('无法连接服务器，导入失败。');
+    }
 }
 
-function showHistory(){
+// 功能三: 获取公共全网动态看板
+async function loadRecentLogs() {
+    try {
+        const response = await fetch('/api/recent-logs');
+        const data = await response.json();
+        
+        if (data.success) {
+            const logList = document.getElementById('logList');
+            logList.innerHTML = ''; // 先行清空旧内容
+            
+            if (data.logs.length === 0) {
+                logList.innerHTML = '<li class="log-item" style="justify-content: center; color: #999;">暂无任何查询记录</li>';
+                return;
+            }
 
-    let history = JSON.parse(localStorage.getItem('history')) || [];
-
-    let html='';
-
-    history.forEach(item=>{
-
-        html += `
-        <div class="history-item">
-            手机号：${item.phone}<br>
-            时间：${item.time}
-        </div>
-        `;
-
-    });
-
-    document.getElementById('history').innerHTML = html;
-
+            // 遍历并渲染每一条公开日志
+            data.logs.forEach(log => {
+                const li = document.createElement('li');
+                li.className = 'log-item';
+                
+                // 根据当时的库状态，生成红/绿不同的专属标签
+                const badgeClass = log.is_in_repo === '在库' ? 'badge badge-in' : 'badge badge-out';
+                
+                li.innerHTML = `
+                    <div>
+                        <span style="color:#888; margin-right:10px;">[${log.q_time}]</span>
+                        <strong style="color:#2c3e50;">${escapeHtml(log.querier_name)}</strong> 
+                        <span> 查询了号码: </span>
+                        <span style="font-family: monospace; background:#eee; padding:2px 6px; border-radius:3px;">${escapeHtml(log.phone_number)}</span>
+                    </div>
+                    <span class="${badgeClass}">${log.is_in_repo}</span>
+                `;
+                logList.appendChild(li);
+            });
+        }
+    } catch (error) {
+        console.error('加载公共动态大看板失败:', error);
+    }
 }
 
-showHistory();
-
-async function loadAllRecords(){
-
-    const response = await fetch('/all');
-
-    const data = await response.json();
-
-    let html = '';
-
-    data.forEach(item=>{
-
-        html += `
-        <div class="history-item">
-
-            手机号：${item.phone}
-            <br>
-
-            查询次数：${item.count}
-            <br>
-
-            查询人：
-            <br>
-
-            ${item.users.join('、')}
-
-        </div>
-        `;
-
-    });
-
-    document.getElementById('allRecords').innerHTML = html;
-
+// 辅助函数：防止前端展示名字或号码时受到 XSS 注入攻击
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
-
-loadAllRecords();
-
 </script>
 
 </body>
